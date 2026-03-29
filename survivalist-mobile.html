@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>SURVIVALIST — Island of Ruin</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap');
+
+  :root {
+    --sand: #c8a96e;
+    --dark-sand: #8b6914;
+    --ocean: #1a4a6b;
+    --deep-ocean: #0d2a3f;
+    --forest: #2d5016;
+    --jungle: #3d6b1e;
+    --stone: #5a5040;
+    --blood: #8b1a1a;
+    --ui-bg: rgba(8, 16, 12, 0.92);
+    --ui-border: #3a5a2a;
+    --gold: #c8a030;
+    --text: #d4c9a0;
+    --health: #cc3333;
+    --hunger: #c87820;
+    --thirst: #2080cc;
+    --stamina: #20aa44;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    font-family: 'Crimson Pro', serif;
+    color: var(--text);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-app-region: no-drag;
+  }
+
+  #game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    touch-action: none;
+  }
+
+  /* CANVAS */
+  #gameCanvas {
+    display: block;
+    image-rendering: pixelated;
+    width: 100%;
+    height: 100%;
+    -webkit-touch-callout: none;
+  }
+
+  /* TITLE SCREEN */
+  #title-screen {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 60%, #0d2a1a 0%, #040c08 60%, #000 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1rem;
+  }
+
+  #title-screen .logo-wrap {
+    text-align: center;
+    animation: fadeInDown 1.2s ease both;
+  }
+
+  #title-screen h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2rem, 10vw, 6rem);
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    color: var(--sand);
+    text-shadow: 0 0 80px rgba(200,169,110,0.4), 0 4px 20px rgba(0,0,0,0.8);
+    line-height: 1;
+  }
+
+  #title-screen .subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.7rem, 2.5vw, 1.2rem);
+    letter-spacing: 0.4em;
+    color: var(--jungle);
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+  }
+
+  #title-screen .tagline {
+    font-style: italic;
+    font-size: clamp(0.8rem, 2vw, 1.1rem);
+    color: #7a9068;
+    margin-top: 1.5rem;
+    letter-spacing: 0.05em;
+  }
+
+  .menu-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 2rem;
+    animation: fadeInUp 1.4s ease both;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .menu-btn {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    letter-spacing: 0.25em;
+    padding: 1rem 1.5rem;
+    border: 1px solid var(--ui-border);
+    background: rgba(30,60,20,0.3);
+    color: var(--text);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .menu-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(60,120,30,0.2), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.4s;
+  }
+
+  .menu-btn:hover::before,
+  .menu-btn:active::before { transform: translateX(100%); }
+  
+  .menu-btn:hover,
+  .menu-btn:active {
+    border-color: var(--sand);
+    color: var(--sand);
+    box-shadow: 0 0 20px rgba(200,169,110,0.2);
+  }
+
+  .menu-btn.primary {
+    border-color: var(--gold);
+    background: rgba(200,160,48,0.1);
+    color: var(--gold);
+    font-size: clamp(1rem, 2.2vw, 1.15rem);
+  }
+
+  #controls-info {
+    display: none;
+    margin-top: 2rem;
+    text-align: center;
+    color: #6a8050;
+    font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+    line-height: 1.8;
+    padding: 0 1rem;
+    max-width: 90vw;
+  }
+
+  #controls-info b {
+    color: var(--sand);
+    font-family: 'Cinzel', serif;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  /* GAME UI OVERLAY */
+  #game-ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* STAT BARS - Mobile responsive */
+  #stats-panel {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    right: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    pointer-events: none;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    padding: 0.5rem 0.7rem;
+    min-width: clamp(150px, 25vw, 220px);
+    backdrop-filter: blur(4px);
+    font-size: clamp(0.6rem, 2vw, 0.78rem);
+  }
+
+  .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    letter-spacing: 0.08em;
+  }
+
+  .stat-label {
+    font-family: 'Cinzel', serif;
+    width: 50px;
+    font-size: clamp(0.5rem, 1.5vw, 0.65rem);
+    opacity: 0.85;
+    flex-shrink: 0;
+  }
+
+  .stat-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 60px;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .stat-val {
+    width: 28px;
+    text-align: right;
+    font-size: clamp(0.5rem, 1.5vw, 0.68rem);
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  /* MINIMAP - Responsive */
+  #minimap {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    padding: 0.3rem;
+    width: clamp(80px, 20vw, 140px);
+    aspect-ratio: 1;
+  }
+
+  #minimapCanvas {
+    display: block;
+    image-rendering: pixelated;
+    width: 100%;
+    height: 100%;
+  }
+
+  #minimap-label {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.45rem, 1.2vw, 0.55rem);
+    letter-spacing: 0.2em;
+    text-align: center;
+    color: var(--jungle);
+    margin-top: 0.2rem;
+    text-transform: uppercase;
+  }
+
+  /* INVENTORY - Touch-friendly */
+  #inventory-panel {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    padding: 0.4rem;
+    display: flex;
+    gap: 0.3rem;
+    pointer-events: all;
+    backdrop-filter: blur(4px);
+    overflow-x: auto;
+    max-width: 95vw;
+    border-radius: 4px;
+  }
+
+  .inv-slot {
+    width: clamp(45px, 10vw, 56px);
+    aspect-ratio: 1;
+    border: 1px solid #2a3a1a;
+    background: rgba(255,255,255,0.03);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    transition: all 0.2s;
+    position: relative;
+    font-size: clamp(1rem, 2.5vw, 1.4rem);
+    line-height: 1;
+    border-radius: 3px;
+    flex-shrink: 0;
+    min-height: 45px;
+  }
+
+  .inv-slot:hover,
+  .inv-slot:active { 
+    border-color: var(--sand); 
+    background: rgba(200,169,110,0.1); 
+  }
+  
+  .inv-slot.selected { 
+    border-color: var(--gold); 
+    box-shadow: 0 0 10px rgba(200,160,48,0.3); 
+  }
+
+  .inv-count {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: clamp(0.45rem, 1.2vw, 0.6rem);
+    color: var(--sand);
+    font-family: 'Cinzel', serif;
+  }
+
+  .inv-slot-label {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.35rem, 0.9vw, 0.45rem);
+    letter-spacing: 0.05em;
+    color: #6a8050;
+    margin-top: 1px;
+  }
+
+  /* MESSAGE LOG - Mobile friendly */
+  #message-log {
+    position: absolute;
+    bottom: clamp(60px, 14vw, 80px);
+    left: 0.5rem;
+    width: clamp(200px, 40vw, 280px);
+    pointer-events: none;
+    max-height: 25vh;
+    overflow-y: auto;
+  }
+
+  .log-entry {
+    font-size: clamp(0.6rem, 1.5vw, 0.75rem);
+    padding: 0.2rem 0.4rem;
+    color: #a0b880;
+    background: rgba(8,16,8,0.75);
+    border-left: 2px solid var(--jungle);
+    margin-bottom: 0.2rem;
+    animation: fadeInLeft 0.3s ease both;
+    opacity: 1;
+    transition: opacity 1s;
+  }
+
+  .log-entry.danger { border-color: var(--blood); color: #e08080; }
+  .log-entry.warning { border-color: var(--dark-sand); color: #e0b060; }
+  .log-entry.info { border-color: var(--ocean); color: #80b8e0; }
+
+  /* TIME INDICATOR */
+  #time-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.6rem, 1.8vw, 0.7rem);
+    letter-spacing: 0.2em;
+    color: var(--sand);
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    padding: 0.3rem 0.8rem;
+    text-transform: uppercase;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* CONTROLS HINT - Hide on mobile by default */
+  #controls-hint {
+    position: absolute;
+    bottom: clamp(60px, 14vw, 80px);
+    right: 0.5rem;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    padding: 0.4rem 0.6rem;
+    font-size: clamp(0.55rem, 1.3vw, 0.65rem);
+    color: #6a8050;
+    line-height: 1.6;
+    letter-spacing: 0.03em;
+    pointer-events: none;
+    display: none;
+    border-radius: 4px;
+  }
+
+  @media (min-width: 768px) {
+    #controls-hint { display: block; }
+  }
+
+  #controls-hint b {
+    color: var(--sand);
+    font-family: 'Cinzel', serif;
+    font-weight: 400;
+  }
+
+  /* DEATH SCREEN */
+  #death-screen {
+    position: absolute;
+    inset: 0;
+    background: rgba(80,0,0,0.85);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 90;
+    backdrop-filter: blur(3px);
+    padding: 1rem;
+  }
+
+  #death-screen h2 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.5rem, 12vw, 4rem);
+    color: #cc2222;
+    text-shadow: 0 0 40px rgba(180,0,0,0.6);
+    animation: pulse 2s infinite;
+  }
+
+  #death-stats {
+    margin-top: 1.5rem;
+    color: #666;
+    font-size: clamp(0.75rem, 1.8vw, 0.85rem);
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* TOUCH CONTROLS - Mobile */
+  #touch-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 35%;
+    pointer-events: none;
+    display: none;
+    z-index: 40;
+  }
+
+  .touch-pad {
+    position: absolute;
+    pointer-events: all;
+    border: 1px solid rgba(100, 180, 60, 0.3);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(100,180,60,0.1) 0%, rgba(100,180,60,0.02) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .touch-pad.movement {
+    bottom: 1rem;
+    left: 1rem;
+    width: 120px;
+    height: 120px;
+  }
+
+  .touch-pad.action {
+    bottom: 1rem;
+    right: 1rem;
+    width: 120px;
+    height: 120px;
+  }
+
+  .touch-pad-inner {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(100, 180, 60, 0.2);
+    position: absolute;
+  }
+
+  .action-button {
+    position: absolute;
+    pointer-events: all;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 100, 100, 0.2);
+    border: 1px solid rgba(255, 100, 100, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: all 0.2s;
+    touch-action: manipulation;
+    user-select: none;
+  }
+
+  .action-button:active {
+    background: rgba(255, 100, 100, 0.4);
+    transform: scale(0.95);
+  }
+
+  .action-button.gather {
+    bottom: 130px;
+    right: 1rem;
+  }
+
+  .action-button.attack {
+    bottom: 65px;
+    right: 1rem;
+  }
+
+  .action-button.use {
+    bottom: 1rem;
+    right: 65px;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInLeft {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Mobile-specific adjustments */
+  @media (max-width: 767px) {
+    #stats-panel {
+      top: 0.3rem;
+      left: 0.3rem;
+      padding: 0.4rem 0.6rem;
+      gap: 0.25rem;
+    }
+
+    #minimap {
+      display: none;
+    }
+
+    #touch-controls {
+      display: block;
+    }
+
+    #inventory-panel {
+      gap: 0.2rem;
+      padding: 0.3rem;
+    }
+
+    #message-log {
+      display: none;
+    }
+  }
+
+  /* Landscape mode adjustments */
+  @media (max-height: 600px) {
+    #touch-controls { height: 45%; }
+    .touch-pad.movement,
+    .touch-pad.action {
+      width: 100px;
+      height: 100px;
+    }
+    .touch-pad-inner {
+      width: 50px;
+      height: 50px;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- TITLE SCREEN -->
+  <div id="title-screen">
+    <div class="logo-wrap">
+      <div class="subtitle">— Island of Ruin —</div>
+      <h1>SURVIVALIST</h1>
+      <div class="tagline">Hunt. Gather. Endure. Or perish.</div>
+    </div>
+    <div class="menu-btns">
+      <button class="menu-btn primary" onclick="startGame()">⚔ Begin Survival</button>
+      <button class="menu-btn" onclick="showControls()">Controls</button>
+    </div>
+    <div id="controls-info">
+      <b>CONTROLS</b>
+      <div style="margin-bottom: 0.5rem;">WASD / Arrow Keys / Touch Pad — Move</div>
+      <div>E / Touch Button — Gather</div>
+      <div>F / Touch Button — Attack</div>
+      <div>Q / Touch Button — Use Item</div>
+      <div>1-8 — Select Slot</div>
+    </div>
+  </div>
+
+  <!-- GAME UI -->
+  <div id="game-ui">
+    <!-- Stats -->
+    <div id="stats-panel">
+      <div class="stat-row">
+        <span class="stat-label" style="color:#cc5555">❤</span>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-health" style="background:var(--health); width:100%"></div></div>
+        <span class="stat-val" id="val-health">100</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label" style="color:#c87820">🍖</span>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-hunger" style="background:var(--hunger); width:100%"></div></div>
+        <span class="stat-val" id="val-hunger">100</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label" style="color:#2080cc">💧</span>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-thirst" style="background:var(--thirst); width:100%"></div></div>
+        <span class="stat-val" id="val-thirst">100</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label" style="color:#20aa44">⚡</span>
+        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-stamina" style="background:var(--stamina); width:100%"></div></div>
+        <span class="stat-val" id="val-stamina">100</span>
+      </div>
+    </div>
+
+    <!-- Time -->
+    <div id="time-indicator">Day 1 — Dawn</div>
+
+    <!-- Minimap -->
+    <div id="minimap">
+      <canvas id="minimapCanvas" width="120" height="120"></canvas>
+      <div id="minimap-label">Island</div>
+    </div>
+
+    <!-- Message Log -->
+    <div id="message-log"></div>
+
+    <!-- Controls Hint -->
+    <div id="controls-hint">
+      <b>WASD</b> Move &nbsp; <b>F</b> Attack<br>
+      <b>E</b> Gather &nbsp; <b>Q</b> Use<br>
+      <b>1-8</b> Select
+    </div>
+
+    <!-- Inventory -->
+    <div id="inventory-panel">
+      <div class="inv-slot selected" id="slot-0" onclick="selectSlot(0)">
+        <span id="slot-icon-0">🪨</span>
+        <span class="inv-count" id="slot-count-0">0</span>
+      </div>
+      <div class="inv-slot" id="slot-1" onclick="selectSlot(1)">
+        <span id="slot-icon-1">🪵</span>
+        <span class="inv-count" id="slot-count-1">0</span>
+      </div>
+      <div class="inv-slot" id="slot-2" onclick="selectSlot(2)">
+        <span id="slot-icon-2">🌿</span>
+        <span class="inv-count" id="slot-count-2">0</span>
+      </div>
+      <div class="inv-slot" id="slot-3" onclick="selectSlot(3)">
+        <span id="slot-icon-3">🍖</span>
+        <span class="inv-count" id="slot-count-3">0</span>
+      </div>
+      <div class="inv-slot" id="slot-4" onclick="selectSlot(4)">
+        <span id="slot-icon-4">💧</span>
+        <span class="inv-count" id="slot-count-4">0</span>
+      </div>
+      <div class="inv-slot" id="slot-5" onclick="selectSlot(5)">
+        <span id="slot-icon-5">🗡️</span>
+        <span class="inv-count" id="slot-count-5">0</span>
+      </div>
+      <div class="inv-slot" id="slot-6" onclick="selectSlot(6)">
+        <span id="slot-icon-6">🔥</span>
+        <span class="inv-count" id="slot-count-6">0</span>
+      </div>
+      <div class="inv-slot" id="slot-7" onclick="selectSlot(7)">
+        <span id="slot-icon-7">🎣</span>
+        <span class="inv-count" id="slot-count-7">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOUCH CONTROLS -->
+  <div id="touch-controls">
+    <div class="touch-pad movement" id="movementPad">
+      <div class="touch-pad-inner"></div>
+    </div>
+    <div class="touch-pad action" id="actionPad">
+      <div class="touch-pad-inner"></div>
+    </div>
+    <button class="action-button gather" id="gatherBtn" onclick="mobileGather()">E</button>
+    <button class="action-button attack" id="attackBtn" onclick="mobileAttack()">F</button>
+    <button class="action-button use" id="useBtn" onclick="mobileUse()">Q</button>
+  </div>
+
+  <!-- DEATH SCREEN -->
+  <div id="death-screen">
+    <h2>YOU DIED</h2>
+    <p style="font-family:'Cinzel',serif; margin-top:1rem; color:#888; letter-spacing:0.2em; font-size:clamp(0.8rem, 2vw, 0.9rem)">THE ISLAND CLAIMED ANOTHER SOUL</p>
+    <p id="death-stats" style="margin-top:1.5rem;"></p>
+    <button class="menu-btn primary" style="pointer-events:all; margin-top:2rem;" onclick="restartGame()">↺ Try Again</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SURVIVALIST — Island of Ruin (MOBILE OPTIMIZED)
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { antialias: false });
+const minimapCanvas = document.getElementById('minimapCanvas');
+const mmCtx = minimapCanvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// ---- WORLD CONFIG ----
+const TILE = 32;
+const WORLD_W = 80;
+const WORLD_H = 80;
+const WORLD_PX = WORLD_W * TILE;
+const WORLD_PY = WORLD_H * TILE;
+
+// Tile types
+const T = { OCEAN:0, SAND:1, GRASS:2, JUNGLE:3, STONE:4, SHALLOW:5, FRESHWATER:6 };
+
+const TILE_COLORS = {
+  [T.OCEAN]:      '#0d2a3f',
+  [T.SHALLOW]:    '#1a4060',
+  [T.SAND]:       '#c8a040',
+  [T.GRASS]:      '#3a7020',
+  [T.JUNGLE]:     '#1e4a0c',
+  [T.STONE]:      '#5a5040',
+  [T.FRESHWATER]: '#1a5080',
+};
+
+// ---- STATE ----
+let gameRunning = false;
+let world = [];
+let player, animals, resources, particles, day, dayTimer;
+let keys = {};
+let selectedSlot = 0;
+let camera = { x: 0, y: 0 };
+let attackCooldown = 0;
+let gatherCooldown = 0;
+let logMessages = [];
+
+const ITEMS = ['stone','wood','herbs','meat','water','spear','fire','fish'];
+const ITEM_ICONS = ['🪨','🪵','🌿','🍖','💧','🗡️','🔥','🎣'];
+
+// Touch input
+let touchInput = { moveX: 0, moveY: 0, gathering: false, attacking: false, using: false };
+
+// ---- WORLD GENERATION ----
+function generateIsland() {
+  world = [];
+  for (let y = 0; y < WORLD_H; y++) {
+    world[y] = [];
+    for (let x = 0; x < WORLD_W; x++) {
+      world[y][x] = T.OCEAN;
+    }
+  }
+
+  const cx = WORLD_W / 2, cy = WORLD_H / 2;
+  for (let y = 0; y < WORLD_H; y++) {
+    for (let x = 0; x < WORLD_W; x++) {
+      const dx = x - cx, dy = y - cy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const noise = simplex(x*0.15, y*0.15) * 7 + simplex(x*0.4, y*0.4) * 3;
+      const r = 26 + noise;
+
+      if (dist < r - 4) {
+        const inner = dist / r;
+        if (inner > 0.7) world[y][x] = T.GRASS;
+        else if (inner > 0.5) world[y][x] = T.JUNGLE;
+        else world[y][x] = T.STONE;
+        if (world[y][x] === T.STONE && Math.random() < 0.15) world[y][x] = T.GRASS;
+      } else if (dist < r) {
+        world[y][x] = T.SAND;
+      } else if (dist < r + 3) {
+        world[y][x] = T.SHALLOW;
+      }
+    }
+  }
+
+  for (let y = cy-4; y < cy+3; y++) {
+    for (let x = cx-3; x < cx+4; x++) {
+      const d = Math.sqrt((x-cx)*(x-cx)+(y-(cy-1))*(y-(cy-1)));
+      if (d < 3.5) world[y][x] = T.FRESHWATER;
+    }
+  }
+}
+
+function simplex(x, y) {
+  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  const n2 = Math.sin(x * 269.5 + y * 183.3) * 43758.5453;
+  return ((n - Math.floor(n)) + (n2 - Math.floor(n2)) - 1);
+}
+
+function getTile(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= WORLD_W || ty >= WORLD_H) return T.OCEAN;
+  return world[ty][tx];
+}
+
+function isWalkable(tx, ty) {
+  const t = getTile(tx, ty);
+  return t !== T.OCEAN && t !== T.SHALLOW && t !== T.FRESHWATER;
+}
+
+// ---- RESOURCES ----
+function spawnResources() {
+  resources = [];
+  for (let y = 0; y < WORLD_H; y++) {
+    for (let x = 0; x < WORLD_W; x++) {
+      const t = world[y][x];
+      const rx = x * TILE + TILE/2;
+      const ry = y * TILE + TILE/2;
+      if (t === T.JUNGLE && Math.random() < 0.12) {
+        resources.push({ type:'tree', x:rx, y:ry, icon:'🌴', label:'Palm Tree', hp:3, drops:'wood', amount:3, radius:14 });
+      }
+      if (t === T.STONE && Math.random() < 0.08) {
+        resources.push({ type:'rock', x:rx, y:ry, icon:'🪨', label:'Rock', hp:2, drops:'stone', amount:2, radius:10 });
+      }
+      if ((t === T.GRASS || t === T.JUNGLE) && Math.random() < 0.06) {
+        resources.push({ type:'herb', x:rx, y:ry, icon:'🌿', label:'Herb Bush', hp:1, drops:'herbs', amount:2, radius:8 });
+      }
+      if (t === T.FRESHWATER && Math.random() < 0.3) {
+        resources.push({ type:'water', x:rx, y:ry, icon:'💧', label:'Fresh Water', hp:99, drops:'water', amount:1, radius:10 });
+      }
+    }
+  }
+}
+
+// ---- ANIMALS ----
+const ANIMAL_TYPES = [
+  { name:'Wild Boar', icon:'🐗', hp:30, speed:0.8, dmg:8, drops:'meat', dropAmt:3, color:'#6b4a2a', radius:14, aggro:false, xp:20 },
+  { name:'Rabbit',    icon:'🐇', hp:8,  speed:1.6, dmg:0, drops:'meat', dropAmt:1, color:'#8a7060', radius:8,  aggro:false, xp:5  },
+  { name:'Deer',      icon:'🦌', hp:20, speed:1.3, dmg:2, drops:'meat', dropAmt:2, color:'#8b6030', radius:12, aggro:false, xp:12 },
+  { name:'Wolf',      icon:'🐺', hp:35, speed:1.1, dmg:15, drops:'meat', dropAmt:2, color:'#4a4a5a', radius:13, aggro:true, xp:25 },
+  { name:'Crab',      icon:'🦀', hp:12, speed:0.5, dmg:6, drops:'meat', dropAmt:1, color:'#cc4422', radius:9,  aggro:true, xp:8  },
+];
+
+function spawnAnimals() {
+  animals = [];
+  const landTiles = [];
+  for (let y = 0; y < WORLD_H; y++) {
+    for (let x = 0; x < WORLD_W; x++) {
+      if (isWalkable(x, y)) landTiles.push({ x, y });
+    }
+  }
+
+  const count = isMobile ? 30 : 45;
+  for (let i = 0; i < count; i++) {
+    const t = landTiles[Math.floor(Math.random() * landTiles.length)];
+    const type = ANIMAL_TYPES[Math.floor(Math.random() * ANIMAL_TYPES.length)];
+    animals.push({
+      ...type,
+      x: t.x * TILE + TILE/2,
+      y: t.y * TILE + TILE/2,
+      maxHp: type.hp,
+      hp: type.hp,
+      vx: 0, vy: 0,
+      moveTimer: Math.random() * 120,
+      state: 'idle',
+      aggroTimer: 0,
+      dead: false,
+      deathTimer: 0,
+    });
+  }
+}
+
+// ---- PLAYER ----
+function initPlayer() {
+  const cx = Math.floor(WORLD_W / 2);
+  const cy = Math.floor(WORLD_H / 2) + 6;
+  player = {
+    x: cx * TILE + TILE/2,
+    y: cy * TILE + TILE/2,
+    health: 100, maxHealth: 100,
+    hunger: 100, maxHunger: 100,
+    thirst: 100, maxThirst: 100,
+    stamina: 100, maxStamina: 100,
+    speed: 2.2,
+    radius: 10,
+    inventory: { stone:0, wood:0, herbs:0, meat:0, water:0, spear:0, fire:0, fish:0 },
+    craftTimer: 0,
+    survivalDays: 0,
+    dead: false,
+    facing: { x:1, y:0 },
+    attackAnim: 0,
+  };
+}
+
+// ---- PARTICLES ----
+function spawnParticle(x, y, icon, color) {
+  particles.push({ x, y, icon, color, vy: -1.5, life: 80, maxLife: 80 });
+}
+
+// ---- GAME LOOP ----
+function startGame() {
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-ui').style.display = 'block';
+  gameRunning = true;
+  
+  generateIsland();
+  spawnResources();
+  spawnAnimals();
+  initPlayer();
+  
+  particles = [];
+  day = 1;
+  dayTimer = 0;
+  logMessages = [];
+  
+  addLog('You awaken on a strange island...', 'info');
+  addLog('Hunt for food. Gather resources. Survive the night.', 'info');
+  
+  loop();
+}
+
+function showControls() {
+  const info = document.getElementById('controls-info');
+  info.style.display = info.style.display === 'none' ? 'block' : 'none';
+}
+
+function loop() {
+  update();
+  render();
+  if (gameRunning) requestAnimationFrame(loop);
+}
+
+function update() {
+  if (player.dead) return;
+
+  // Handle input
+  const moveX = touchInput.moveX || (keys['w'] || keys['ArrowUp'] ? -1 : 0) + (keys['s'] || keys['ArrowDown'] ? 1 : 0);
+  const moveY = touchInput.moveY || (keys['a'] || keys['ArrowLeft'] ? -1 : 0) + (keys['d'] || keys['ArrowRight'] ? 1 : 0);
+
+  const len = Math.hypot(moveX, moveY);
+  if (len > 0) {
+    player.x += (moveX / len) * player.speed;
+    player.y += (moveY / len) * player.speed;
+    player.facing = { x: moveX / len, y: moveY / len };
+    player.stamina = Math.max(0, player.stamina - 0.3);
+  } else {
+    player.stamina = Math.min(player.maxStamina, player.stamina + 0.15);
+  }
+
+  // Keep player in bounds
+  player.x = Math.max(player.radius, Math.min(WORLD_PX - player.radius, player.x));
+  player.y = Math.max(player.radius, Math.min(WORLD_PY - player.radius, player.y));
+
+  // Gather
+  if ((keys['e'] || touchInput.gathering) && gatherCooldown <= 0) {
+    touchInput.gathering = false;
+    gatherNearby();
+    gatherCooldown = 20;
+  }
+
+  // Attack
+  if ((keys['f'] || touchInput.attacking) && attackCooldown <= 0) {
+    touchInput.attacking = false;
+    playerAttack();
+    attackCooldown = 30;
+  }
+
+  // Use item
+  if ((keys['q'] || touchInput.using) && player.inventory[ITEMS[selectedSlot]] > 0) {
+    touchInput.using = false;
+    useItem(selectedSlot);
+  }
+
+  // Slot selection
+  for (let i = 0; i < 8; i++) {
+    if (keys[String(i+1)]) selectSlot(i);
+  }
+
+  // Update cooldowns
+  attackCooldown--;
+  gatherCooldown--;
+
+  // Update resources
+  resources.forEach(r => {
+    if (r.hp <= 0 && !r.dead) {
+      r.dead = true;
+      r.deadTimer = 60;
+    }
+    if (r.dead) r.deadTimer--;
+  });
+  resources = resources.filter(r => r.deadTimer === undefined || r.deadTimer > 0);
+
+  // Update animals
+  animals.forEach(a => {
+    if (a.dead) {
+      a.deathTimer++;
+      if (a.deathTimer > 300) a.dead = 'removed';
+      return;
+    }
+
+    const dx = player.x - a.x;
+    const dy = player.y - a.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < 80 && a.aggro) {
+      a.state = 'chase';
+      a.aggroTimer = 120;
+    } else if (a.aggroTimer > 0) {
+      a.aggroTimer--;
+      if (a.aggroTimer <= 0) a.state = 'idle';
+    } else {
+      a.state = 'idle';
+    }
+
+    if (a.state === 'chase') {
+      const len = Math.hypot(dx, dy);
+      a.vx = (dx / len) * a.speed;
+      a.vy = (dy / len) * a.speed;
+    } else if (a.moveTimer <= 0) {
+      const angle = Math.random() * Math.PI * 2;
+      a.vx = Math.cos(angle) * a.speed * 0.5;
+      a.vy = Math.sin(angle) * a.speed * 0.5;
+      a.moveTimer = Math.random() * 180 + 60;
+    } else {
+      a.moveTimer--;
+    }
+
+    a.x += a.vx;
+    a.y += a.vy;
+
+    const tx = Math.floor(a.x / TILE);
+    const ty = Math.floor(a.y / TILE);
+    if (!isWalkable(tx, ty)) {
+      a.vx *= -1;
+      a.vy *= -1;
+    }
+
+    a.x = Math.max(a.radius, Math.min(WORLD_PX - a.radius, a.x));
+    a.y = Math.max(a.radius, Math.min(WORLD_PY - a.radius, a.y));
+
+    // Collision with player
+    if (dist < player.radius + a.radius) {
+      player.health -= a.dmg * 0.016;
+      a.vx = (a.x - player.x) / dist * 2;
+      a.vy = (a.y - player.y) / dist * 2;
+    }
+  });
+  animals = animals.filter(a => a.dead !== 'removed');
+
+  // Update particles
+  particles.forEach(p => {
+    p.y += p.vy;
+    p.vy -= 0.1;
+    p.life--;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  // Survival stats decay
+  player.hunger -= 0.08;
+  player.thirst -= 0.1;
+  if (player.hunger <= 0) player.health -= 1;
+  if (player.thirst <= 0) player.health -= 1.5;
+
+  // Day/night cycle
+  dayTimer++;
+  const cycleLength = isMobile ? 1800 : 1200;
+  if (dayTimer > cycleLength) {
+    dayTimer = 0;
+    day++;
+    addLog(`Day ${day} begins...`, 'info');
+  }
+
+  // Camera follow
+  camera.x = player.x - canvas.width / 2;
+  camera.y = player.y - canvas.height / 2;
+  camera.x = Math.max(0, Math.min(WORLD_PX - canvas.width, camera.x));
+  camera.y = Math.max(0, Math.min(WORLD_PY - canvas.height, camera.y));
+
+  // Death check
+  if (player.health <= 0) {
+    player.dead = true;
+    showDeathScreen();
+  }
+
+  // Update UI
+  updateUI();
+}
+
+function gatherNearby() {
+  resources.forEach(r => {
+    const dx = player.x - r.x;
+    const dy = player.y - r.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 60 && r.hp > 0) {
+      r.hp--;
+      if (r.hp <= 0) {
+        player.inventory[r.drops] += r.amount;
+        addLog(`Gathered ${r.amount}x ${r.drops}`, 'info');
+        spawnParticle(r.x, r.y, r.icon, '#c8a040');
+      }
+    }
+  });
+}
+
+function playerAttack() {
+  let hit = false;
+  animals.forEach(a => {
+    if (a.dead) return;
+    const dx = player.x - a.x;
+    const dy = player.y - a.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 70) {
+      a.hp -= 15;
+      if (a.hp <= 0) {
+        a.dead = true;
+        a.deathTimer = 0;
+        player.inventory[a.drops] += a.dropAmt;
+        addLog(`Defeated ${a.name}! +${a.dropAmt}x ${a.drops}`, 'warning');
+        spawnParticle(a.x, a.y, '💥', '#ff6644');
+      } else {
+        spawnParticle(a.x, a.y, '⚔️', '#cc0000');
+      }
+      hit = true;
+    }
+  });
+  player.attackAnim = 15;
+}
+
+function useItem(slot) {
+  const itemType = ITEMS[slot];
+  if (itemType === 'meat') {
+    player.hunger = Math.min(100, player.hunger + 30);
+    player.inventory[itemType]--;
+    addLog('Ate meat. Hunger restored.', 'info');
+  } else if (itemType === 'water') {
+    player.thirst = Math.min(100, player.thirst + 40);
+    player.inventory[itemType]--;
+    addLog('Drank water. Thirst quenched.', 'info');
+  } else if (itemType === 'herbs') {
+    player.health = Math.min(100, player.health + 20);
+    player.inventory[itemType]--;
+    addLog('Used herbs. Feeling better.', 'info');
+  }
+}
+
+function selectSlot(i) {
+  selectedSlot = i;
+  document.querySelectorAll('.inv-slot').forEach((el, idx) => {
+    el.classList.toggle('selected', idx === i);
+  });
+}
+
+function addLog(msg, type = 'normal') {
+  logMessages.unshift({ msg, type, timer: 200 });
+  if (logMessages.length > 5) logMessages.pop();
+}
+
+function updateUI() {
+  document.getElementById('bar-health').style.width = (player.health / player.maxHealth * 100) + '%';
+  document.getElementById('val-health').innerText = Math.ceil(player.health);
+  
+  document.getElementById('bar-hunger').style.width = (player.hunger / player.maxHunger * 100) + '%';
+  document.getElementById('val-hunger').innerText = Math.ceil(player.hunger);
+  
+  document.getElementById('bar-thirst').style.width = (player.thirst / player.maxThirst * 100) + '%';
+  document.getElementById('val-thirst').innerText = Math.ceil(player.thirst);
+  
+  document.getElementById('bar-stamina').style.width = (player.stamina / player.maxStamina * 100) + '%';
+  document.getElementById('val-stamina').innerText = Math.ceil(player.stamina);
+
+  const timeOfDay = (dayTimer / 1200) * 24;
+  const period = timeOfDay < 6 || timeOfDay >= 18 ? 'Night' : timeOfDay < 12 ? 'Dawn' : 'Dusk';
+  document.getElementById('time-indicator').innerText = `Day ${day} — ${period}`;
+
+  ITEMS.forEach((item, i) => {
+    document.getElementById(`slot-count-${i}`).innerText = player.inventory[item];
+  });
+
+  const logEl = document.getElementById('message-log');
+  logEl.innerHTML = logMessages.map(l => 
+    `<div class="log-entry ${l.type}">${l.msg}</div>`
+  ).join('');
+}
+
+function render() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+
+  // Draw world
+  for (let y = 0; y < WORLD_H; y++) {
+    for (let x = 0; x < WORLD_W; x++) {
+      ctx.fillStyle = TILE_COLORS[world[y][x]];
+      ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+    }
+  }
+
+  // Draw resources
+  resources.forEach(r => {
+    if (r.dead) return;
+    ctx.font = (r.radius * 1.2) + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(r.icon, r.x, r.y);
+  });
+
+  // Draw animals
+  animals.forEach(a => {
+    if (a.dead) {
+      ctx.globalAlpha = 0.5;
+    }
+    ctx.font = (a.radius * 1.3) + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(a.icon, a.x, a.y);
+    ctx.globalAlpha = 1;
+  });
+
+  // Draw player
+  ctx.font = '28px Arial';
+  ctx.fillText('🧍', player.x, player.y);
+  
+  if (player.attackAnim > 0) {
+    ctx.font = '40px Arial';
+    ctx.globalAlpha = player.attackAnim / 15;
+    ctx.fillText('⚔️', player.x + player.facing.x * 20, player.y + player.facing.y * 20);
+    ctx.globalAlpha = 1;
+    player.attackAnim--;
+  }
+
+  // Draw particles
+  particles.forEach(p => {
+    ctx.font = '20px Arial';
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillText(p.icon, p.x, p.y);
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+
+  // Draw minimap
+  if (!isMobile) {
+    mmCtx.fillStyle = '#000';
+    mmCtx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+    
+    const scale = minimapCanvas.width / WORLD_W;
+    for (let y = 0; y < WORLD_H; y++) {
+      for (let x = 0; x < WORLD_W; x++) {
+        mmCtx.fillStyle = TILE_COLORS[world[y][x]];
+        mmCtx.fillRect(x * scale, y * scale, scale, scale);
+      }
+    }
+    
+    mmCtx.fillStyle = '#00ff00';
+    mmCtx.fillRect(player.x / TILE * scale - 2, player.y / TILE * scale - 2, 4, 4);
+  }
+}
+
+function showDeathScreen() {
+  document.getElementById('death-screen').style.display = 'flex';
+  document.getElementById('death-stats').innerText = `Survived ${day} days • Gathered ${player.inventory.stone + player.inventory.wood + player.inventory.herbs} resources`;
+}
+
+function restartGame() {
+  document.getElementById('death-screen').style.display = 'none';
+  document.getElementById('title-screen').style.display = 'flex';
+  gameRunning = false;
+}
+
+// Mobile touch controls
+function setupTouchControls() {
+  const movementPad = document.getElementById('movementPad');
+  const actionPad = document.getElementById('actionPad');
+
+  function getTouchPos(e, pad) {
+    const rect = pad.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left - rect.width / 2;
+    const y = touch.clientY - rect.top - rect.height / 2;
+    const dist = Math.hypot(x, y);
+    const maxDist = rect.width / 2 - 30;
+    const normalized = Math.min(dist, maxDist) / maxDist;
+    return { x: (x / dist) * normalized || 0, y: (y / dist) * normalized || 0 };
+  }
+
+  movementPad.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const pos = getTouchPos(e, movementPad);
+    touchInput.moveX = pos.x;
+    touchInput.moveY = pos.y;
+  });
+
+  movementPad.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const pos = getTouchPos(e, movementPad);
+    touchInput.moveX = pos.x;
+    touchInput.moveY = pos.y;
+  });
+
+  movementPad.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    touchInput.moveX = 0;
+    touchInput.moveY = 0;
+  });
+}
+
+function mobileGather() {
+  touchInput.gathering = true;
+}
+
+function mobileAttack() {
+  touchInput.attacking = true;
+}
+
+function mobileUse() {
+  touchInput.using = true;
+}
+
+// Keyboard input
+document.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+});
+
+document.addEventListener('keyup', (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+// Window resize
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// Initialize touch controls on mobile
+if (isMobile) {
+  setupTouchControls();
+}
+</script>
+</body>
+</html>
