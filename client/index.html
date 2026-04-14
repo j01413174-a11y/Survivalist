@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Survivalist MMO</title>
+<style>
+body { margin:0; background:#111; }
+canvas { display:block; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const ws = new WebSocket('ws://localhost:3000');
+
+let player = { x:100, y:100 };
+let players = {};
+
+document.addEventListener('keydown', e => {
+  if(e.key==='w') player.y -=5;
+  if(e.key==='s') player.y +=5;
+  if(e.key==='a') player.x -=5;
+  if(e.key==='d') player.x +=5;
+});
+
+ws.onmessage = (msg)=>{
+  players = JSON.parse(msg.data);
+};
+
+function loop(){
+  ws.send(JSON.stringify(player));
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for(let id in players){
+    let p = players[id];
+    ctx.fillStyle='lime';
+    ctx.fillRect(p.x,p.y,20,20);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
